@@ -15,6 +15,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+object AlarmDiagnostics {
+    fun logEvent(context: Context, eventName: String, details: Map<String, Any?> = emptyMap()) {
+        val detailsFormatted = if (details.isEmpty()) "" else details.entries.joinToString(" | ") { "${it.key}=${it.value}" }
+        val message = "📊 [$eventName] $detailsFormatted"
+        AlarmLogger.log(context, message)
+    }
+}
+
 object ReminderManager {
 
     fun canScheduleExactAlarms(context: Context): Boolean {
@@ -41,6 +49,26 @@ object ReminderManager {
         } else {
             true
         }
+    }
+
+    fun verifyAlarmExists(context: Context, taskId: Long): Boolean {
+        val intent = Intent(context, TaskReminderReceiver::class.java).apply {
+            action = "com.example.reminder.ACTION_TASK_ALARM"
+        }
+        val requestCode = taskId.toInt().coerceAtLeast(1)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+        val exists = pendingIntent != null
+        AlarmDiagnostics.logEvent(
+            context,
+            "VERIFY_ALARM_IN_SYSTEM",
+            mapOf("taskId" to taskId, "requestCode" to requestCode, "registeredInOS" to exists)
+        )
+        return exists
     }
 
     fun openExactAlarmSettings(context: Context) {
@@ -149,7 +177,17 @@ object ReminderManager {
         }
 
         val formattedTime = SimpleDateFormat("HH:mm:ss dd/MM", Locale.getDefault()).format(Date(triggerTime))
-        AlarmLogger.log(context, "📌 [Dijadwalkan] Task ID: ${task.id} (${task.title}) jam $formattedTime")
+        AlarmDiagnostics.logEvent(
+            context,
+            "SCHEDULE_TASK_ALARM",
+            mapOf(
+                "taskId" to task.id,
+                "title" to task.title,
+                "triggerTime" to formattedTime,
+                "canExact" to canScheduleExactAlarms(context),
+                "isIgnoreBattery" to isIgnoringBatteryOptimizations(context)
+            )
+        )
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
@@ -158,16 +196,17 @@ object ReminderManager {
                     triggerTime,
                     pendingIntent
                 )
-                AlarmLogger.log(context, "⚠️ Using setAndAllowWhileIdle (Exact Alarm disabled by OS)")
+                AlarmDiagnostics.logEvent(context, "SET_AND_ALLOW_WHILE_IDLE_FALLBACK", mapOf("reason" to "exact_alarm_permission_disabled"))
+                verifyAlarmExists(context, task.id)
                 return
             }
 
             // Priority 1: setAlarmClock (bypasses Doze mode and guarantees exact second firing even when app is closed)
             val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTime, showPendingIntent)
             alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-            AlarmLogger.log(context, "✅ setAlarmClock berhasil didaftarkan ke sistem!")
+            AlarmDiagnostics.logEvent(context, "SET_ALARM_CLOCK_SUCCESS", mapOf("taskId" to task.id))
         } catch (e: Exception) {
-            AlarmLogger.log(context, "⚠️ setAlarmClock gagal: ${e.message}, mencoba fallback setExactAndAllowWhileIdle...")
+            AlarmDiagnostics.logEvent(context, "SET_ALARM_CLOCK_FAILED", mapOf("error" to e.message))
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     alarmManager.setExactAndAllowWhileIdle(
@@ -183,9 +222,12 @@ object ReminderManager {
                     )
                 }
             } catch (ex: Exception) {
-                AlarmLogger.log(context, "❌ Gagal mendaftarkan alarm: ${ex.message}")
+                AlarmDiagnostics.logEvent(context, "SET_EXACT_FALLBACK_FAILED", mapOf("error" to ex.message))
             }
         }
+
+        // Verify alarm presence in system
+        verifyAlarmExists(context, task.id)
     }
 
     fun cancelTaskReminder(context: Context, taskId: Long) {
@@ -203,12 +245,12 @@ object ReminderManager {
         if (pendingIntent != null) {
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
-            AlarmLogger.log(context, "🗑️ Alarm dibatalkan untuk Task ID: $taskId")
+            AlarmDiagnostics.logEvent(context, "CANCEL_ALARM_SUCCESS", mapOf("taskId" to taskId))
         }
     }
 
     fun triggerImmediateTestReminder(context: Context, title: String = "Meeting with friends", category: String = "Family") {
-        AlarmLogger.log(context, "🧪 Tes Alarm Langsung Dijalankan...")
+        AlarmDiagnostics.logEvent(context, "TEST_ALARM_TRIGGERED_DIRECTLY", mapOf("title" to title))
         val serviceIntent = Intent(context, ReminderService::class.java).apply {
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, 999999L)
             putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, title)
@@ -218,7 +260,7 @@ object ReminderManager {
         try {
             androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
         } catch (e: Exception) {
-            AlarmLogger.log(context, "❌ Gagal Tes Alarm: ${e.message}")
+            AlarmDiagnostics.logEvent(context, "TEST_ALARM_FAILED", mapOf("error" to e.message))
             e.printStackTrace()
         }
     }
