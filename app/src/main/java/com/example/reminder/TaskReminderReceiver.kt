@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import com.example.util.AlarmLogger
 
 class TaskReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -12,19 +13,21 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val categoryName = intent.getStringExtra(EXTRA_CATEGORY_NAME) ?: "Tugas"
         val remark = intent.getStringExtra(EXTRA_REMARK) ?: ""
 
-        // Delegate to Foreground Service (bypasses Android background & process killed restrictions)
+        AlarmLogger.log(context, "⚡ [BroadcastReceiver] Alarm terpicu dari sistem! ID: $taskId, Judul: $taskTitle")
+
         val serviceIntent = Intent(context, ReminderService::class.java).apply {
             putExtra(EXTRA_TASK_ID, taskId)
-            putExtra(EXTRA_TASK_TITLE, taskTitle)
-            putExtra(EXTRA_CATEGORY_NAME, categoryName)
-            putExtra(EXTRA_REMARK, remark)
+            putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, taskTitle)
+            putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, categoryName)
+            putExtra(TaskReminderReceiver.EXTRA_REMARK, remark)
         }
 
         try {
             ContextCompat.startForegroundService(context, serviceIntent)
+            AlarmLogger.log(context, "🚀 [ForegroundService] Berhasil meluncurkan ReminderService!")
         } catch (e: Exception) {
+            AlarmLogger.log(context, "❌ [Gagal Start Service] Error: ${e.message}")
             e.printStackTrace()
-            // Fallback for edge cases
             ReminderService.stop(context)
         }
     }

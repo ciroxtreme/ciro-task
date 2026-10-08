@@ -113,6 +113,7 @@ fun SettingsScreen(
     var showCategoryPickerModal by remember { mutableStateOf(false) }
     var editingTagForPicker by remember { mutableStateOf<com.example.util.TagData?>(null) }
     var showTagPickerModal by remember { mutableStateOf(false) }
+    var showAlarmLogsDialog by remember { mutableStateOf(false) }
 
     val completedCount = tasks.count { it.isCompleted }
     val totalCount = tasks.size
@@ -319,6 +320,16 @@ fun SettingsScreen(
                             title = "Tes Pop-up Alarm",
                             subtitle = "Tes langsung pop-up reminder di layar HP Anda.",
                             onClick = onTestReminder
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        SettingRowItem(
+                            icon = Icons.Default.HelpOutline,
+                            iconBg = PastelBlue,
+                            title = "📋 Log Diagnostik Alarm (Realtime)",
+                            subtitle = "Lihat catatan saat alarm dijadwalkan & dipicu di HP Infinix Anda.",
+                            onClick = { showAlarmLogsDialog = true }
                         )
                     }
                 }
@@ -861,6 +872,100 @@ fun SettingsScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = WarmPrimary)
                     ) {
                         Text("Tutup", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    // Alarm Logs Diagnostic Dialog
+    if (showAlarmLogsDialog) {
+        val logs = remember(showAlarmLogsDialog) { com.example.util.AlarmLogger.getLogs(context) }
+        Dialog(onDismissRequest = { showAlarmLogsDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBF3)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "📋 Log Diagnostik Alarm",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = WarmText,
+                                fontSize = 16.sp
+                            )
+                        )
+                        IconButton(onClick = { showAlarmLogsDialog = false }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = WarmTextSecondary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(280.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF222831))
+                            .padding(12.dp)
+                    ) {
+                        if (logs.isEmpty()) {
+                            Text(
+                                text = "Belum ada log alarm tersimpan.\nCoba buat tugas baru dengan alarm untuk melihat catatan di sini.",
+                                color = Color.LightGray,
+                                fontSize = 12.sp
+                            )
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(logs.size) { idx ->
+                                    Text(
+                                        text = logs[idx],
+                                        color = if (logs[idx].contains("❌")) Color(0xFFFF6B6B) else if (logs[idx].contains("🚀") || logs[idx].contains("✅")) Color(0xFF51CF66) else Color(0xFFE0E0E0),
+                                        fontSize = 11.sp,
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                        modifier = Modifier.padding(vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                com.example.util.AlarmLogger.clearLogs(context)
+                                showAlarmLogsDialog = false
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Hapus Log", fontSize = 12.sp, color = WarmText)
+                        }
+
+                        Button(
+                            onClick = { showAlarmLogsDialog = false },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = WarmPrimary),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Tutup", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
