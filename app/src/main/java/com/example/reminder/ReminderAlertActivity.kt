@@ -96,7 +96,9 @@ class ReminderAlertActivity : ComponentActivity() {
                         category = categoryName,
                         remark = remark,
                         onComplete = {
+                            AlarmSoundPlayer.stop(applicationContext)
                             ReminderService.stop(applicationContext)
+                            AlarmNotificationHelper.cancelAlarmNotification(applicationContext, taskId)
                             if (taskId > 0) {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     val task = repository.getTaskById(taskId)
@@ -108,7 +110,9 @@ class ReminderAlertActivity : ComponentActivity() {
                             finish()
                         },
                         onSnooze = { minutes ->
+                            AlarmSoundPlayer.stop(applicationContext)
                             ReminderService.stop(applicationContext)
+                            AlarmNotificationHelper.cancelAlarmNotification(applicationContext, taskId)
                             if (taskId > 0) {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     val task = repository.getTaskById(taskId)
@@ -123,7 +127,9 @@ class ReminderAlertActivity : ComponentActivity() {
                             finish()
                         },
                         onDismiss = {
+                            AlarmSoundPlayer.stop(applicationContext)
                             ReminderService.stop(applicationContext)
+                            AlarmNotificationHelper.cancelAlarmNotification(applicationContext, taskId)
                             finish()
                         }
                     )
@@ -143,15 +149,18 @@ class ReminderAlertActivity : ComponentActivity() {
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                         WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             )
         }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        AlarmSoundPlayer.stop(applicationContext)
         ReminderService.stop(applicationContext)
+        val taskId = intent.getLongExtra(TaskReminderReceiver.EXTRA_TASK_ID, -1L)
+        AlarmNotificationHelper.cancelAlarmNotification(applicationContext, taskId)
     }
 }
 

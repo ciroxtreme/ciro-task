@@ -2,6 +2,7 @@ package com.example.reminder
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -53,7 +54,7 @@ object ReminderManager {
 
     fun verifyAlarmExists(context: Context, taskId: Long): Boolean {
         val intent = Intent(context, TaskReminderReceiver::class.java).apply {
-            action = "com.example.reminder.ACTION_TASK_ALARM"
+            action = TaskReminderReceiver.ACTION_TASK_ALARM
         }
         val requestCode = taskId.toInt().coerceAtLeast(1)
         val pendingIntent = PendingIntent.getBroadcast(
@@ -110,6 +111,44 @@ object ReminderManager {
         }
     }
 
+    fun openAutoStartSettings(context: Context) {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val intents = mutableListOf<Intent>()
+
+        when {
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+                intents.add(Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")))
+            }
+            manufacturer.contains("transsion") || manufacturer.contains("infinix") || manufacturer.contains("tecno") || manufacturer.contains("itel") -> {
+                intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.MainActivity")))
+                intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.autostart.AutoStartActivity")))
+            }
+            manufacturer.contains("oppo") || manufacturer.contains("realme") -> {
+                intents.add(Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")))
+            }
+            manufacturer.contains("vivo") || manufacturer.contains("iqoo") -> {
+                intents.add(Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.safeguard.PurviewTabActivity")))
+            }
+            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
+                intents.add(Intent().setComponent(ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")))
+            }
+            manufacturer.contains("samsung") -> {
+                intents.add(Intent().setComponent(ComponentName("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity")))
+            }
+        }
+        intents.add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+        })
+
+        for (intent in intents) {
+            try {
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {}
+        }
+    }
+
     fun openOverlaySettings(context: Context) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -139,9 +178,11 @@ object ReminderManager {
     fun scheduleTaskReminder(context: Context, task: TaskEntity, categoryName: String) {
         if (!task.hasReminder || task.isCompleted) return
 
+        AlarmNotificationHelper.createNotificationChannel(context)
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        
         val intent = Intent(context, TaskReminderReceiver::class.java).apply {
-            action = "com.example.reminder.ACTION_TASK_ALARM"
+            action = TaskReminderReceiver.ACTION_TASK_ALARM
             addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, task.id)
             putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, task.title)
@@ -233,7 +274,7 @@ object ReminderManager {
     fun cancelTaskReminder(context: Context, taskId: Long) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val intent = Intent(context, TaskReminderReceiver::class.java).apply {
-            action = "com.example.reminder.ACTION_TASK_ALARM"
+            action = TaskReminderReceiver.ACTION_TASK_ALARM
         }
         val requestCode = taskId.toInt().coerceAtLeast(1)
         val pendingIntent = PendingIntent.getBroadcast(
@@ -247,21 +288,19 @@ object ReminderManager {
             pendingIntent.cancel()
             AlarmDiagnostics.logEvent(context, "CANCEL_ALARM_SUCCESS", mapOf("taskId" to taskId))
         }
+        AlarmNotificationHelper.cancelAlarmNotification(context, taskId)
+        AlarmSoundPlayer.stop(context)
     }
 
     fun triggerImmediateTestReminder(context: Context, title: String = "Meeting with friends", category: String = "Family") {
         AlarmDiagnostics.logEvent(context, "TEST_ALARM_TRIGGERED_DIRECTLY", mapOf("title" to title))
-        val serviceIntent = Intent(context, ReminderService::class.java).apply {
+        val intent = Intent(context, TaskReminderReceiver::class.java).apply {
+            action = TaskReminderReceiver.ACTION_TASK_ALARM
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, 999999L)
             putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, title)
             putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, category)
             putExtra(TaskReminderReceiver.EXTRA_REMARK, "Ini contoh Pop-up Reminder aktif Ciro Task!")
         }
-        try {
-            androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
-        } catch (e: Exception) {
-            AlarmDiagnostics.logEvent(context, "TEST_ALARM_FAILED", mapOf("error" to e.message))
-            e.printStackTrace()
-        }
+        context.sendBroadcast(intent)
     }
 }

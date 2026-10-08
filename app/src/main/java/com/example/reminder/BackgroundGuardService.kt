@@ -12,27 +12,15 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
-import com.example.data.db.AppDatabase
-import com.example.data.repository.TaskRepository
 import com.example.util.AlarmLogger
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 class BackgroundGuardService : Service() {
-
-    private val serviceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
-    private val triggeredTaskIds = mutableSetOf<Long>()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        AlarmLogger.log(this, "🛡️ BackgroundGuardService dimulai!")
+        AlarmLogger.log(this, "🛡️ BackgroundGuardService dimulai (mode hemat daya).")
         val notification = createGuardNotification()
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -51,7 +39,6 @@ class BackgroundGuardService : Service() {
                 startForeground(GUARD_NOTIFICATION_ID, notification)
             } catch (_: Exception) {}
         }
-        startMonitoringLoop()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,44 +51,6 @@ class BackgroundGuardService : Service() {
         return START_STICKY
     }
 
-    private fun startMonitoringLoop() {
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = TaskRepository(database.taskDao(), database.categoryDao())
-
-        serviceScope.launch {
-            while (isActive) {
-                try {
-                    val now = System.currentTimeMillis()
-                    val tasks = repository.getUncompletedTasksWithReminders()
-                    val categories = database.categoryDao().getAllCategoriesList()
-                    val categoryMap = categories.associate { it.id to it.name }
-
-                    for (task in tasks) {
-                        if (task.dueTimestamp <= now + 2000 && !triggeredTaskIds.contains(task.id)) {
-                            triggeredTaskIds.add(task.id)
-                            val catName = categoryMap[task.categoryId] ?: "Tugas"
-                            AlarmLogger.log(
-                                applicationContext,
-                                "🛡️ [Penjaga Background] Pemicu Backup Mengabaikan Pembatasan OS! Task: ${task.title}"
-                            )
-
-                            val serviceIntent = Intent(applicationContext, ReminderService::class.java).apply {
-                                putExtra(TaskReminderReceiver.EXTRA_TASK_ID, task.id)
-                                putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, task.title)
-                                putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, catName)
-                                putExtra(TaskReminderReceiver.EXTRA_REMARK, task.remark)
-                            }
-                            androidx.core.content.ContextCompat.startForegroundService(applicationContext, serviceIntent)
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                delay(5000L)
-            }
-        }
-    }
-
     private fun createGuardNotification(): android.app.Notification {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -111,7 +60,7 @@ class BackgroundGuardService : Service() {
                 "Ciro Task Background Guard",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Menjaga alarm tetap aktif di HP Infinix/Xiaomi saat aplikasi ditutup"
+                description = "Menjaga proses alarm tetap aktif di HP Infinix/Xiaomi"
                 setShowBadge(false)
             }
             notificationManager.createNotificationChannel(channel)
@@ -128,7 +77,7 @@ class BackgroundGuardService : Service() {
         return NotificationCompat.Builder(this, GUARD_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("🛡️ Ciro Task Penjaga Alarm Aktif")
-            .setContentText("Alarm dijamin 100% berbunyi tepat waktu saat aplikasi ditutup")
+            .setContentText("Hardware RTC Alarm aktif & siap memicu tepat waktu")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setContentIntent(openPendingIntent)
@@ -138,7 +87,7 @@ class BackgroundGuardService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        serviceJob.cancel()
+        AlarmLogger.log(this, "🛡️ BackgroundGuardService berhenti.")
     }
 
     companion object {
