@@ -118,6 +118,7 @@ fun MainAppContent(viewModel: TaskViewModel = viewModel()) {
         } else {
             when (currentTab) {
                 NavTab.TASKS -> {
+                    val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
                     TasksScreen(
                         tasks = filteredTasks,
                         allTasksRaw = allTasks,
@@ -125,6 +126,8 @@ fun MainAppContent(viewModel: TaskViewModel = viewModel()) {
                         timeFilter = timeFilter,
                         selectedCategoryId = filterState.categoryId,
                         selectedTag = filterState.tag,
+                        selectedSort = sortOption,
+                        onSelectSortOption = { viewModel.setSortOption(it) },
                         onSelectTimeFilter = { viewModel.setTimeFilter(it) },
                         onSelectCategory = { viewModel.setFilterCategory(it) },
                         onSelectTag = { viewModel.setFilterTag(it) },

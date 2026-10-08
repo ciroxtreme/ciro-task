@@ -77,6 +77,8 @@ fun TasksScreen(
     timeFilter: TaskTimeFilter,
     selectedCategoryId: String?,
     selectedTag: String?,
+    selectedSort: com.example.ui.components.SortOption,
+    onSelectSortOption: (com.example.ui.components.SortOption) -> Unit,
     onSelectTimeFilter: (TaskTimeFilter) -> Unit,
     onSelectCategory: (String?) -> Unit,
     onSelectTag: (String?) -> Unit,
@@ -93,6 +95,7 @@ fun TasksScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     var isCompletedExpanded by remember { mutableStateOf(true) }
+    var showSortPopup by remember { mutableStateOf(false) }
 
     // Split tasks into Today, Next 7 days, and Completed
     val calendar = Calendar.getInstance()
@@ -175,7 +178,7 @@ fun TasksScreen(
             ) {
                 item {
                     Spacer(modifier = Modifier.height(14.dp))
-                    // Top Header: Top-Left Drawer Button and Menu
+                    // Top Header matching Screenshot 1 & 2: All Tasks Pill + Hamburger Menu (Sort Popup Trigger)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -183,56 +186,48 @@ fun TasksScreen(
                     ) {
                         Box(
                             modifier = Modifier
+                                .weight(1f)
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(Color(0xFFF3ECE0))
                                 .clickable {
                                     coroutineScope.launch { drawerState.open() }
                                 }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.Menu,
-                                    contentDescription = "Buka Menu",
+                                    imageVector = Icons.Default.GridView,
+                                    contentDescription = "Grid View",
                                     tint = WarmText,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = currentTitleText,
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = WarmText,
-                                        fontSize = 16.sp
+                                        fontSize = 17.sp
                                     )
                                 )
                             }
                         }
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = onOpenSearch,
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFF3ECE0))
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Search & Filter",
-                                    tint = WarmText,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                        Spacer(modifier = Modifier.width(10.dp))
 
-                            CuteMascotAvatar(
-                                size = 36.dp,
-                                modifier = Modifier.clickable {
-                                    coroutineScope.launch { drawerState.open() }
-                                }
+                        // Right Hamburger Menu Button for Sort By Popup (Screenshot 1 & 2)
+                        IconButton(
+                            onClick = { showSortPopup = true },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFFF3ECE0))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Sort Menu",
+                                tint = WarmText,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
@@ -460,6 +455,16 @@ fun TasksScreen(
             item {
                 Spacer(modifier = Modifier.height(110.dp))
             }
+        }
+
+        // Sort By Popup Menu (Screenshot 1)
+        if (showSortPopup) {
+            com.example.ui.components.SortByMenuPopup(
+                selectedSort = selectedSort,
+                onSortSelected = onSelectSortOption,
+                onOpenSettings = onOpenSettings,
+                onDismiss = { showSortPopup = false }
+            )
         }
 
         // Floating Pencil FAB (Screenshot 1 & 2)

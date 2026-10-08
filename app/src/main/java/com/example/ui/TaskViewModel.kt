@@ -82,12 +82,12 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     // Set of tasks already alerted during this session to prevent repeated spam
     private val alertedTaskIds = mutableSetOf<Long>()
 
-    // Time filter for side drawer (All, Today, Tomorrow, Next 7 days, Completed)
-    private val _timeFilter = MutableStateFlow(TaskTimeFilter.ALL)
-    val timeFilter: StateFlow<TaskTimeFilter> = _timeFilter.asStateFlow()
+    // Sort option for task list (Date, Priority, List, None)
+    private val _sortOption = MutableStateFlow(com.example.ui.components.SortOption.NONE)
+    val sortOption: StateFlow<com.example.ui.components.SortOption> = _sortOption.asStateFlow()
 
-    // Filtered tasks flow
-    val filteredTasks: StateFlow<List<TaskEntity>> = combine(allTasks, _filterState, _timeFilter) { tasks, filter, timeF ->
+    // Filtered tasks flow with sorting
+    val filteredTasks: StateFlow<List<TaskEntity>> = combine(allTasks, _filterState, _timeFilter, _sortOption) { tasks, filter, timeF, sortOpt ->
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -100,7 +100,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         val tomorrowEnd = tomorrowStart + (24 * 3600 * 1000) - 1
         val next7DaysEnd = todayStart + (7L * 24 * 3600 * 1000) - 1
 
-        tasks.filter { task ->
+        val filtered = tasks.filter { task ->
             val matchesTime = when (timeF) {
                 TaskTimeFilter.ALL -> true
                 TaskTimeFilter.TODAY -> !task.isCompleted && task.dueTimestamp in todayStart..todayEnd
@@ -128,7 +128,26 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
             matchesTime && matchesQuery && matchesCategory && matchesTag && matchesPriority && matchesDate
         }
+
+        // Apply Sorting
+        when (sortOpt) {
+            com.example.ui.components.SortOption.DATE -> filtered.sortedBy { it.dueTimestamp }
+            com.example.ui.components.SortOption.PRIORITY -> filtered.sortedByDescending {
+                when (it.priority.lowercase()) {
+                    "high" -> 3
+                    "medium" -> 2
+                    "low" -> 1
+                    else -> 0
+                }
+            }
+            com.example.ui.components.SortOption.LIST -> filtered.sortedBy { it.categoryId }
+            com.example.ui.components.SortOption.NONE -> filtered
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setSortOption(option: com.example.ui.components.SortOption) {
+        _sortOption.value = option
+    }
 
     fun setTab(tab: NavTab) {
         _currentTab.value = tab
