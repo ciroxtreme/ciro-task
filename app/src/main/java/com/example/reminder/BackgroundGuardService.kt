@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -33,7 +34,23 @@ class BackgroundGuardService : Service() {
         super.onCreate()
         AlarmLogger.log(this, "🛡️ BackgroundGuardService dimulai!")
         val notification = createGuardNotification()
-        startForeground(GUARD_NOTIFICATION_ID, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    GUARD_NOTIFICATION_ID,
+                    notification,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                    else 0
+                )
+            } else {
+                startForeground(GUARD_NOTIFICATION_ID, notification)
+            }
+        } catch (_: Exception) {
+            try {
+                startForeground(GUARD_NOTIFICATION_ID, notification)
+            } catch (_: Exception) {}
+        }
         startMonitoringLoop()
     }
 
@@ -60,7 +77,6 @@ class BackgroundGuardService : Service() {
                     val categoryMap = categories.associate { it.id to it.name }
 
                     for (task in tasks) {
-                        // If due within 2 seconds or already reached, and hasn't been triggered in this guard loop
                         if (task.dueTimestamp <= now + 2000 && !triggeredTaskIds.contains(task.id)) {
                             triggeredTaskIds.add(task.id)
                             val catName = categoryMap[task.categoryId] ?: "Tugas"
@@ -69,7 +85,6 @@ class BackgroundGuardService : Service() {
                                 "🛡️ [Penjaga Background] Pemicu Backup Mengabaikan Pembatasan OS! Task: ${task.title}"
                             )
 
-                            // Launch ReminderService directly
                             val serviceIntent = Intent(applicationContext, ReminderService::class.java).apply {
                                 putExtra(TaskReminderReceiver.EXTRA_TASK_ID, task.id)
                                 putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, task.title)
@@ -82,7 +97,7 @@ class BackgroundGuardService : Service() {
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                delay(5000L) // Check every 5 seconds
+                delay(5000L)
             }
         }
     }
@@ -140,10 +155,7 @@ class BackgroundGuardService : Service() {
 
         fun stop(context: Context) {
             try {
-                val intent = Intent(context, BackgroundGuardService::class.java).apply {
-                    action = ACTION_STOP_GUARD
-                }
-                context.startService(intent)
+                context.stopService(Intent(context, BackgroundGuardService::class.java))
             } catch (_: Exception) {}
         }
     }

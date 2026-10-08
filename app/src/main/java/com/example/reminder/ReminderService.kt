@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
@@ -44,7 +45,24 @@ class ReminderService : Service() {
         // 2. Start Foreground Notification (bypasses OS background restrictions)
         val notification = createForegroundNotification(taskId, taskTitle, categoryName, remark)
         val notificationId = (if (taskId > 0) taskId else System.currentTimeMillis()).toInt().coerceAtLeast(1)
-        startForeground(notificationId, notification)
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    notificationId,
+                    notification,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                    else 0
+                )
+            } else {
+                startForeground(notificationId, notification)
+            }
+        } catch (_: Exception) {
+            try {
+                startForeground(notificationId, notification)
+            } catch (_: Exception) {}
+        }
 
         // 3. Start Alarm Audio & Vibration
         startAlarmAudio()
@@ -110,16 +128,6 @@ class ReminderService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
-        val stopIntent = Intent(this, ReminderService::class.java).apply {
-            action = ACTION_STOP_ALARM
-        }
-        val stopPendingIntent = PendingIntent.getService(
-            this,
-            (taskId + 9999).toInt(),
-            stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-        )
-
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("⏰ Alarm Tugas: $title")
@@ -129,7 +137,6 @@ class ReminderService : Service() {
             .setOngoing(true)
             .setContentIntent(fullScreenPendingIntent)
             .setFullScreenIntent(fullScreenPendingIntent, true)
-            .addAction(R.mipmap.ic_launcher, "Matikan Alarm", stopPendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
     }
@@ -211,10 +218,7 @@ class ReminderService : Service() {
 
         fun stop(context: Context) {
             try {
-                val intent = Intent(context, ReminderService::class.java).apply {
-                    action = ACTION_STOP_ALARM
-                }
-                context.startService(intent)
+                context.stopService(Intent(context, ReminderService::class.java))
             } catch (_: Exception) {}
         }
     }
