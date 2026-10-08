@@ -81,7 +81,7 @@ fun AddTagDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TagHelper.PredefinedTags.forEach { tagData ->
+                    TagHelper.CustomTagList.forEach { tagData ->
                         TagPill(
                             tag = tagData,
                             modifier = Modifier.clickable {
