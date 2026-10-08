@@ -259,9 +259,9 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 1: Pengaturan Notifikasi
+            // SECTION 1: Pengaturan Notifikasi & Alarm
             item {
-                SectionHeader("Notifikasi")
+                SectionHeader("Notifikasi & Optimasi Alarm")
             }
 
             item {
@@ -291,10 +291,32 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
+                        val isExactAlarmGranted = remember(context) { com.example.reminder.ReminderManager.canScheduleExactAlarms(context) }
+                        SettingRowItem(
+                            icon = Icons.Default.Notifications,
+                            iconBg = if (isExactAlarmGranted) PastelGreen else PastelOrange,
+                            title = "Izin Alarm Presisi (Exact Alarm)",
+                            subtitle = if (isExactAlarmGranted) "✅ Diizinkan (Alarm akan bunyi tepat waktu)" else "⚠️ Dibatasi (Ketuk untuk mengaktifkan izin alarm presisi)",
+                            onClick = { com.example.reminder.ReminderManager.openExactAlarmSettings(context) }
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        val isIgnoringBattery = remember(context) { com.example.reminder.ReminderManager.isIgnoringBatteryOptimizations(context) }
+                        SettingRowItem(
+                            icon = Icons.Default.HelpOutline,
+                            iconBg = if (isIgnoringBattery) PastelGreen else PastelPink,
+                            title = "Matikan Penghemat Baterai",
+                            subtitle = if (isIgnoringBattery) "✅ Bebas Pembatasan (Alarm tetap aktif saat HP mati/tutup)" else "⚠️ Dibatasi Sistem (Ketuk agar alarm tidak dimatikan HP)",
+                            onClick = { com.example.reminder.ReminderManager.openBatteryOptimizationSettings(context) }
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         SettingRowItem(
                             icon = Icons.Default.HelpOutline,
                             iconBg = PastelOrange,
-                            title = "Notification Not Working?",
+                            title = "Tes Pop-up Alarm",
                             subtitle = "Tes langsung pop-up reminder di layar HP Anda.",
                             onClick = onTestReminder
                         )

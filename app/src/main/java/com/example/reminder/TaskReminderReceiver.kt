@@ -6,8 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
@@ -20,18 +18,31 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val categoryName = intent.getStringExtra(EXTRA_CATEGORY_NAME) ?: "Tugas"
         val remark = intent.getStringExtra(EXTRA_REMARK) ?: ""
 
-        // 1. Acquire WakeLock to keep CPU awake
+        // 1. Acquire WakeLock to turn screen on and wake CPU
+        var wakeLock: PowerManager.WakeLock? = null
         try {
             val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-            val wakeLock = pm?.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            @Suppress("DEPRECATION")
+            wakeLock = pm?.newWakeLock(
+                PowerManager.FULL_WAKE_LOCK or
+                        PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                        PowerManager.ON_AFTER_RELEASE,
                 "ciro:reminder_wakelock"
             )
-            wakeLock?.acquire(10000L)
-        } catch (_: Exception) {}
+            wakeLock?.acquire(15000L) // 15s wake lock
+        } catch (_: Exception) {
+            try {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                wakeLock = pm?.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                    "ciro:reminder_wakelock"
+                )
+                wakeLock?.acquire(15000L)
+            } catch (_: Exception) {}
+        }
 
-        // 2. Launch single floating pop-up activity (works open, background, closed, or locked)
-        launchPopupActivity(context, taskId, taskTitle, categoryName, remark)
+        // 2. Try launching popup activity directly
+        val launchedDirectly = launchPopupActivity(context, taskId, taskTitle, categoryName, remark)
 
         // 3. Show high-priority heads-up notification with full-screen intent
         showNotification(context, taskId, taskTitle, categoryName, remark)
@@ -43,8 +54,8 @@ class TaskReminderReceiver : BroadcastReceiver() {
         taskTitle: String,
         categoryName: String,
         remark: String
-    ) {
-        try {
+    ): Boolean {
+        return try {
             val popupIntent = Intent(context, ReminderAlertActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -55,8 +66,10 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 putExtra(EXTRA_REMARK, remark)
             }
             context.startActivity(popupIntent)
+            true
         } catch (e: Exception) {
             e.printStackTrace()
+            false
         }
     }
 
@@ -65,7 +78,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val EXTRA_CATEGORY_NAME = "extra_category_name"
         const val EXTRA_REMARK = "extra_remark"
-        const val CHANNEL_ID = "ciro_task_reminders_v4"
+        const val CHANNEL_ID = "ciro_task_reminders_v5"
 
         fun showNotification(
             context: Context,
@@ -77,26 +90,17 @@ class TaskReminderReceiver : BroadcastReceiver() {
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .build()
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     CHANNEL_ID,
                     "Ciro Task Pop-up Alarms",
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
-                    description = "Alarm & pop-up pengingat tugas Ciro Task dengan suara keras"
+                    description = "Alarm & pop-up pengingat tugas Ciro Task"
                     enableVibration(true)
                     vibrationPattern = longArrayOf(0, 500, 250, 500)
                     enableLights(true)
                     setShowBadge(true)
-                    setSound(soundUri, audioAttributes)
                     lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
                     setBypassDnd(true)
                 }
@@ -126,11 +130,10 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 .setContentText("Kategori: $category ${if (remark.isNotBlank()) "• $remark" else ""}")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setSound(soundUri)
                 .setVibrate(longArrayOf(0, 500, 250, 500))
                 .setAutoCancel(true)
                 .setContentIntent(fullScreenPendingIntent)
-                .setFullScreenIntent(fullScreenPendingIntent, true) // Launches pop-up even if app is closed/phone locked
+                .setFullScreenIntent(fullScreenPendingIntent, true) // Launches pop-up even when app is closed
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
             val notificationId = (if (taskId > 0) taskId else System.currentTimeMillis()).toInt().coerceAtLeast(1)

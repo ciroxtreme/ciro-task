@@ -1,14 +1,109 @@
 package com.example.reminder
 
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import com.example.MainActivity
 import com.example.data.model.TaskEntity
 
 object ReminderManager {
+
+    fun canScheduleExactAlarms(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            alarmManager?.canScheduleExactAlarms() ?: true
+        } else {
+            true
+        }
+    }
+
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            pm?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+        } else {
+            true
+        }
+    }
+
+    fun canDrawOverlays(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(context)
+        } else {
+            true
+        }
+    }
+
+    fun openExactAlarmSettings(context: Context) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            } else {
+                openAppDetailsSettings(context)
+            }
+        } catch (_: Exception) {
+            openAppDetailsSettings(context)
+        }
+    }
+
+    fun openBatteryOptimizationSettings(context: Context) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            }
+        } catch (_: Exception) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
+                }
+            } catch (_: Exception) {
+                openAppDetailsSettings(context)
+            }
+        }
+    }
+
+    fun openOverlaySettings(context: Context) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            }
+        } catch (_: Exception) {
+            openAppDetailsSettings(context)
+        }
+    }
+
+    fun openAppDetailsSettings(context: Context) {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     fun scheduleTaskReminder(context: Context, task: TaskEntity, categoryName: String) {
         if (!task.hasReminder || task.isCompleted) return
@@ -42,18 +137,23 @@ object ReminderManager {
         )
 
         val now = System.currentTimeMillis()
-        var triggerTime = task.dueTimestamp
+        val triggerTime = task.dueTimestamp
 
-        // If time was set for the current minute or just passed within the last 2 minutes, trigger in 1.5 seconds!
+        // Don't schedule past reminders
         if (triggerTime <= now) {
-            if (triggerTime >= now - 120_000) {
-                triggerTime = now + 1500
-            } else {
-                return // Old past task, don't alert
-            }
+            return
         }
 
         try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+                return
+            }
+
             // Priority 1: setAlarmClock (bypasses Doze mode and guarantees exact second firing even when app is closed)
             val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTime, showPendingIntent)
             alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
@@ -100,7 +200,6 @@ object ReminderManager {
     }
 
     fun triggerImmediateTestReminder(context: Context, title: String = "Meeting with friends", category: String = "Family") {
-        // Direct launch single popup dialog activity
         try {
             val popupIntent = Intent(context, ReminderAlertActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -116,7 +215,6 @@ object ReminderManager {
             e.printStackTrace()
         }
 
-        // Show Heads-Up Notification
         TaskReminderReceiver.showNotification(
             context = context,
             taskId = 999999L,
