@@ -39,40 +39,45 @@ fun CategoryIconBadge(
     size: Dp = 38.dp,
     shapeRadius: Dp = 12.dp
 ) {
-    val (bgGradient, emojiSymbol, subBadge) = when (iconType.lowercase()) {
-        "burger", "family", "food" -> Triple(
+    val (bgGradient, emojiSymbol, subBadge) = when {
+        iconType.lowercase() in listOf("burger", "family", "food") -> Triple(
             listOf(Color(0xFFFFF0D6), Color(0xFFFCE1B6)),
             "🍔",
             "✨"
         )
-        "backpack", "study", "school" -> Triple(
+        iconType.lowercase() in listOf("backpack", "study", "school") -> Triple(
             listOf(Color(0xFFFFE5E8), Color(0xFFFCD0D5)),
             "🎒",
             "📚"
         )
-        "pet", "cat", "dog" -> Triple(
+        iconType.lowercase() in listOf("pet", "cat", "dog") -> Triple(
             listOf(Color(0xFFF3EAFF), Color(0xFFE5D2FC)),
             "🐱",
             "🐾"
         )
-        "health", "hospital", "heart" -> Triple(
+        iconType.lowercase() in listOf("health", "hospital", "heart") -> Triple(
             listOf(Color(0xFFE4F9EB), Color(0xFFCCF2D7)),
             "🩺",
             "💖"
         )
-        "work" -> Triple(
+        iconType.lowercase() == "work" -> Triple(
             listOf(Color(0xFFEBEBFC), Color(0xFFD6D6F9)),
             "💼",
             "⭐"
         )
-        "sport", "game" -> Triple(
+        iconType.lowercase() in listOf("sport", "game") -> Triple(
             listOf(Color(0xFFFFECE5), Color(0xFFFFD5C7)),
             "🏸",
             "⚡"
         )
-        "star" -> Triple(
+        iconType.lowercase() == "star" -> Triple(
             listOf(Color(0xFFFFF9DB), Color(0xFFFFF0A6)),
             "⭐",
+            "✨"
+        )
+        iconType.isNotBlank() -> Triple(
+            listOf(Color(0xFFE5F1FC), Color(0xFFCCE4FA)),
+            iconType,
             "✨"
         )
         else -> Triple(

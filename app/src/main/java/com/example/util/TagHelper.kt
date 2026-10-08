@@ -10,7 +10,7 @@ data class TagData(
 
 object TagHelper {
 
-    val PredefinedTags = listOf(
+    val CustomTagList = androidx.compose.runtime.mutableStateListOf(
         TagData("Tree", "🥦", Color(0xFFD8F3DF)),
         TagData("Bag", "🎒", Color(0xFFFDE5C5)),
         TagData("Tooth", "🦷", Color(0xFFD6F6F5)),
@@ -26,6 +26,23 @@ object TagHelper {
         TagData("Star", "⭐", Color(0xFFFFF2C2)),
         TagData("Music", "🎵", Color(0xFFFDE8C7))
     )
+
+    fun saveOrUpdateTag(oldTag: TagData?, newName: String, newIcon: String, newColor: Color) {
+        val newTag = TagData(newName, newIcon, newColor)
+        if (oldTag != null) {
+            val idx = CustomTagList.indexOfFirst { it.name.equals(oldTag.name, ignoreCase = true) }
+            if (idx >= 0) {
+                CustomTagList[idx] = newTag
+                return
+            }
+        }
+        CustomTagList.removeAll { it.name.equals(newName, ignoreCase = true) }
+        CustomTagList.add(newTag)
+    }
+
+    fun deleteTag(tag: TagData) {
+        CustomTagList.removeAll { it.name.equals(tag.name, ignoreCase = true) }
+    }
 
     fun getTagData(rawTag: String): TagData {
         val trimmed = rawTag.trim()
@@ -44,8 +61,8 @@ object TagHelper {
             return TagData(name, icon, color)
         }
 
-        // Match predefined tags
-        val matched = PredefinedTags.find { it.name.equals(trimmed, ignoreCase = true) }
+        // Match custom or predefined tags
+        val matched = CustomTagList.find { it.name.equals(trimmed, ignoreCase = true) }
         if (matched != null) return matched
 
         // Keyword based fallback

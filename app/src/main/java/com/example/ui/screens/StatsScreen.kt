@@ -95,22 +95,6 @@ fun StatsScreen(
             monthCounts[m]++
         }
     }
-    // ensure visual fidelity if new database
-    if (monthCounts.all { it == 0 }) {
-        monthCounts[0] = 4
-        monthCounts[1] = 24
-        monthCounts[2] = 39
-        monthCounts[3] = 7
-        monthCounts[4] = 14
-        monthCounts[5] = 32
-        monthCounts[6] = 11
-        monthCounts[7] = 44
-        monthCounts[8] = 25
-        monthCounts[9] = 35
-        monthCounts[10] = 8
-        monthCounts[11] = 3
-    }
-
     val maxMonthCount = monthCounts.maxOrNull()?.coerceAtLeast(1) ?: 1
 
     Box(modifier = modifier.fillMaxSize().background(CreamBg)) {

@@ -111,6 +111,8 @@ fun SettingsScreen(
     var showWidgetPreviewDialog by remember { mutableStateOf(false) }
     var editingCategoryForPicker by remember { mutableStateOf<CategoryEntity?>(null) }
     var showCategoryPickerModal by remember { mutableStateOf(false) }
+    var editingTagForPicker by remember { mutableStateOf<com.example.util.TagData?>(null) }
+    var showTagPickerModal by remember { mutableStateOf(false) }
 
     val completedCount = tasks.count { it.isCompleted }
     val totalCount = tasks.size
@@ -630,18 +632,32 @@ fun SettingsScreen(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 36.dp)
             ) {
-                Text(
-                    text = "Kelola Tag (Tags)",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = WarmText,
-                        fontSize = 18.sp
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Kelola Tag (Tags)",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = WarmText,
+                            fontSize = 18.sp
+                        )
                     )
-                )
+                    IconButton(
+                        onClick = {
+                            editingTagForPicker = null
+                            showTagPickerModal = true
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Tambah Tag", tint = WarmPrimary)
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                TagHelper.PredefinedTags.forEach { tagData ->
+                TagHelper.CustomTagList.forEach { tagData ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -665,13 +681,39 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        Text(
-                            text = "Aktif",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = WarmTextSecondary
-                        )
+                        IconButton(
+                            onClick = {
+                                editingTagForPicker = tagData
+                                showTagPickerModal = true
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Tag", tint = WarmTextSecondary, modifier = Modifier.size(18.dp))
+                        }
+
+                        IconButton(
+                            onClick = { TagHelper.deleteTag(tagData) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Hapus Tag", tint = Color(0xFFC76F69), modifier = Modifier.size(18.dp))
+                        }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        editingTagForPicker = null
+                        showTagPickerModal = true
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = WarmPrimary)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Tambah Tag Baru ✨", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -692,6 +734,26 @@ fun SettingsScreen(
                 onSaveCategory(name, icon, hex)
                 showCategoryPickerModal = false
                 editingCategoryForPicker = null
+            }
+        )
+    }
+
+    // Tag Customizer Modal
+    if (showTagPickerModal) {
+        CategoryTagPickerModal(
+            initialName = editingTagForPicker?.name ?: "",
+            initialIcon = editingTagForPicker?.icon ?: "🥦",
+            initialColorHex = "#5CD8D3",
+            titleDialog = if (editingTagForPicker != null) "Edit Tag" else "Tambah Tag Baru",
+            onDismiss = {
+                showTagPickerModal = false
+                editingTagForPicker = null
+            },
+            onConfirm = { name, icon, hex ->
+                val color = try { Color(android.graphics.Color.parseColor(hex)) } catch (_: Exception) { Color(0xFF5CD8D3) }
+                TagHelper.saveOrUpdateTag(editingTagForPicker, name, icon, color)
+                showTagPickerModal = false
+                editingTagForPicker = null
             }
         )
     }
