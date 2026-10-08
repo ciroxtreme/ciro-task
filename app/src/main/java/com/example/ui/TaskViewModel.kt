@@ -62,11 +62,16 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
                 val now = System.currentTimeMillis()
                 val categories = allCategories.value
                 val categoryMap = categories.associate { it.id to it.name }
+                var activeReminderCount = 0
                 tasks.forEach { task ->
                     if (task.hasReminder && !task.isCompleted && task.dueTimestamp > now) {
+                        activeReminderCount++
                         val catName = categoryMap[task.categoryId] ?: "Tugas"
                         ReminderManager.scheduleTaskReminder(application, task, catName)
                     }
+                }
+                if (activeReminderCount > 0) {
+                    com.example.reminder.BackgroundGuardService.start(application)
                 }
             }
         }
@@ -270,6 +275,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
             val catName = allCategories.value.find { it.id == categoryId }?.name ?: "Task"
             if (hasReminder) {
                 ReminderManager.scheduleTaskReminder(getApplication(), savedTask, catName)
+                com.example.reminder.BackgroundGuardService.start(getApplication())
             }
         }
     }
@@ -297,6 +303,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
             val catName = allCategories.value.find { it.id == task.categoryId }?.name ?: "Task"
             if (task.hasReminder && !task.isCompleted) {
                 ReminderManager.scheduleTaskReminder(getApplication(), task, catName)
+                com.example.reminder.BackgroundGuardService.start(getApplication())
             } else {
                 ReminderManager.cancelTaskReminder(getApplication(), task.id)
             }
