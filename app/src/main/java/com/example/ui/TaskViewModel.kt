@@ -79,8 +79,9 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     private val _editingCategory = MutableStateFlow<CategoryEntity?>(null)
     val editingCategory: StateFlow<CategoryEntity?> = _editingCategory.asStateFlow()
 
-    // Set of tasks already alerted during this session to prevent repeated spam
-    private val alertedTaskIds = mutableSetOf<Long>()
+    // Time filter for side drawer (All, Today, Tomorrow, Next 7 days, Completed)
+    private val _timeFilter = MutableStateFlow(TaskTimeFilter.ALL)
+    val timeFilter: StateFlow<TaskTimeFilter> = _timeFilter.asStateFlow()
 
     // Sort option for task list (Date, Priority, List, None)
     private val _sortOption = MutableStateFlow(com.example.ui.components.SortOption.NONE)
