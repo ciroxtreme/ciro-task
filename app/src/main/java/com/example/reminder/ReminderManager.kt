@@ -120,6 +120,7 @@ object ReminderManager {
                 intents.add(Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")))
             }
             manufacturer.contains("transsion") || manufacturer.contains("infinix") || manufacturer.contains("tecno") || manufacturer.contains("itel") -> {
+                intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.startupmanager.StartupManagerActivity")))
                 intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.MainActivity")))
                 intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.autostart.AutoStartActivity")))
             }
@@ -184,6 +185,7 @@ object ReminderManager {
         val intent = Intent(context, TaskReminderReceiver::class.java).apply {
             action = TaskReminderReceiver.ACTION_TASK_ALARM
             addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, task.id)
             putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, task.title)
             putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, categoryName)

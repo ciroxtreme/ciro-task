@@ -51,6 +51,11 @@ class BackgroundGuardService : Service() {
         return START_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        AlarmLogger.log(this, "🛡️ Aplikasi di-swipe dari Recents, menjaga proses tetap hidup...")
+    }
+
     private fun createGuardNotification(): android.app.Notification {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
