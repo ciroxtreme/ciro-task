@@ -56,6 +56,22 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     val allCategories: StateFlow<List<CategoryEntity>> = repository.allCategories
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        viewModelScope.launch {
+            allTasks.collect { tasks ->
+                val now = System.currentTimeMillis()
+                val categories = allCategories.value
+                val categoryMap = categories.associate { it.id to it.name }
+                tasks.forEach { task ->
+                    if (task.hasReminder && !task.isCompleted && task.dueTimestamp > now) {
+                        val catName = categoryMap[task.categoryId] ?: "Tugas"
+                        ReminderManager.scheduleTaskReminder(application, task, catName)
+                    }
+                }
+            }
+        }
+    }
+
     private val _currentTab = MutableStateFlow(NavTab.TASKS)
     val currentTab: StateFlow<NavTab> = _currentTab.asStateFlow()
 

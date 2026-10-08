@@ -77,9 +77,6 @@ class ReminderAlertActivity : ComponentActivity() {
         val categoryName = intent.getStringExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME) ?: "Tugas"
         val remark = intent.getStringExtra(TaskReminderReceiver.EXTRA_REMARK) ?: ""
 
-        // Play alarm sound and vibration
-        startAlarmAudio()
-
         val repository = TaskRepository(
             AppDatabase.getDatabase(applicationContext).taskDao(),
             AppDatabase.getDatabase(applicationContext).categoryDao()
@@ -99,7 +96,7 @@ class ReminderAlertActivity : ComponentActivity() {
                         category = categoryName,
                         remark = remark,
                         onComplete = {
-                            stopAlarmAudio()
+                            ReminderService.stop(applicationContext)
                             if (taskId > 0) {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     val task = repository.getTaskById(taskId)
@@ -111,7 +108,7 @@ class ReminderAlertActivity : ComponentActivity() {
                             finish()
                         },
                         onSnooze = { minutes ->
-                            stopAlarmAudio()
+                            ReminderService.stop(applicationContext)
                             if (taskId > 0) {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     val task = repository.getTaskById(taskId)
@@ -126,7 +123,7 @@ class ReminderAlertActivity : ComponentActivity() {
                             finish()
                         },
                         onDismiss = {
-                            stopAlarmAudio()
+                            ReminderService.stop(applicationContext)
                             finish()
                         }
                     )
@@ -152,53 +149,9 @@ class ReminderAlertActivity : ComponentActivity() {
         }
     }
 
-    private fun startAlarmAudio() {
-        try {
-            val alertUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(applicationContext, alertUri)
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .build()
-                )
-                isLooping = true
-                prepare()
-                start()
-            }
-
-            vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(
-                    VibrationEffect.createWaveform(
-                        longArrayOf(0, 500, 300, 500),
-                        0
-                    )
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(longArrayOf(0, 500, 300, 500), 0)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun stopAlarmAudio() {
-        try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-            mediaPlayer = null
-            vibrator?.cancel()
-        } catch (_: Exception) {}
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        stopAlarmAudio()
+        ReminderService.stop(applicationContext)
     }
 }
 
