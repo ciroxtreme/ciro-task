@@ -200,27 +200,16 @@ object ReminderManager {
     }
 
     fun triggerImmediateTestReminder(context: Context, title: String = "Meeting with friends", category: String = "Family") {
+        val serviceIntent = Intent(context, ReminderService::class.java).apply {
+            putExtra(TaskReminderReceiver.EXTRA_TASK_ID, 999999L)
+            putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, title)
+            putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, category)
+            putExtra(TaskReminderReceiver.EXTRA_REMARK, "Ini contoh Pop-up Reminder aktif Ciro Task!")
+        }
         try {
-            val popupIntent = Intent(context, ReminderAlertActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(TaskReminderReceiver.EXTRA_TASK_ID, 999999L)
-                putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, title)
-                putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, category)
-                putExtra(TaskReminderReceiver.EXTRA_REMARK, "Ini contoh Pop-up Reminder aktif Ciro Task!")
-            }
-            context.startActivity(popupIntent)
+            androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
         } catch (e: Exception) {
             e.printStackTrace()
         }
-
-        TaskReminderReceiver.showNotification(
-            context = context,
-            taskId = 999999L,
-            title = title,
-            category = category,
-            remark = "Ini contoh Pop-up Reminder aktif Ciro Task!"
-        )
     }
 }
