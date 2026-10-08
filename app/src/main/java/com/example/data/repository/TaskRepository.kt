@@ -17,6 +17,8 @@ class TaskRepository(
 
     suspend fun getTaskById(id: Long): TaskEntity? = taskDao.getTaskById(id)
 
+    suspend fun getUncompletedTasksWithReminders(): List<TaskEntity> = taskDao.getUncompletedTasksWithReminders()
+
     suspend fun insertTask(task: TaskEntity): Long = taskDao.insertTask(task)
 
     suspend fun updateTask(task: TaskEntity) = taskDao.updateTask(task)

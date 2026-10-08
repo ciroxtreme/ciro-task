@@ -17,6 +17,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY dueTimestamp ASC")
     fun getActiveTasks(): Flow<List<TaskEntity>>
 
+    @Query("SELECT * FROM tasks WHERE isCompleted = 0 AND hasReminder = 1")
+    suspend fun getUncompletedTasksWithReminders(): List<TaskEntity>
+
     @Query("SELECT * FROM tasks WHERE isCompleted = 1 ORDER BY completedAt DESC, dueTimestamp DESC")
     fun getCompletedTasks(): Flow<List<TaskEntity>>
 

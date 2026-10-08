@@ -38,6 +38,10 @@
             android:name=".reminder.ReminderService"
             android:exported="false" />
 
+        <service
+            android:name=".reminder.BackgroundGuardService"
+            android:exported="false" />
+
         <receiver
             android:name=".reminder.TaskReminderReceiver"
             android:enabled="true"
