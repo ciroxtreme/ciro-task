@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Ciro Task</string>
+    <string name="all_tasks">All Tasks</string>
+    <string name="today">Today</string>
+    <string name="next_7_days">Next 7 days</string>
+    <string name="completed">Completed</string>
+    <string name="search_placeholder">Search by task title or remark</string>
+    <string name="add_task">Add Task</string>
+    <string name="subtasks">Subtasks</string>
+    <string name="priority">Priority</string>
+    <string name="category">Category</string>
+    <string name="calendar">Calendar</string>
+    <string name="stats">Stats</string>
+    <string name="profile">Profile</string>
+    <string name="extract_apk">Ekstrak &amp; Simpan APK</string>
+</resources>

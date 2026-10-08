@@ -1,0 +1,7 @@
+{
+  "name": "Ciro Task",
+  "description": "Aesthetic pastel To-Do List and Task Manager with calendar timeline, habit heatmap, graphic statistics, pop-up reminders, and APK extractor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
