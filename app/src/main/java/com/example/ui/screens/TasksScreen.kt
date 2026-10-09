@@ -78,8 +78,6 @@ fun TasksScreen(
     selectedCategoryId: String?,
     selectedTag: String?,
     selectedSort: com.example.ui.components.SortOption,
-    isExactAlarmAllowed: Boolean = true,
-    onRequestExactAlarmPermission: () -> Unit = {},
     onSelectSortOption: (com.example.ui.components.SortOption) -> Unit,
     onSelectTimeFilter: (TaskTimeFilter) -> Unit,
     onSelectCategory: (String?) -> Unit,
@@ -231,52 +229,6 @@ fun TasksScreen(
                                 tint = WarmText,
                                 modifier = Modifier.size(22.dp)
                             )
-                        }
-                    }
-                }
-
-                if (!isExactAlarmAllowed) {
-                    item {
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onRequestExactAlarmPermission() }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("⏰", fontSize = 22.sp)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Izin Alarm Belum Aktif",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF856404),
-                                            fontSize = 13.sp
-                                        )
-                                    )
-                                    Text(
-                                        text = "Ketuk untuk mengizinkan 'Alarms & Reminders' agar tidak ditahan Infinix XOS.",
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF856404).copy(alpha = 0.85f),
-                                            fontSize = 11.sp
-                                        )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Aktifkan",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF533F03),
-                                        fontSize = 12.sp
-                                    )
-                                )
-                            }
                         }
                     }
                 }

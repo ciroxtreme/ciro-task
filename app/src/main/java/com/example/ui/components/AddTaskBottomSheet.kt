@@ -438,32 +438,6 @@ fun AddTaskBottomSheet(
                 )
             }
 
-            if (hasReminder && !com.example.reminder.ReminderManager.canScheduleExactAlarms(context)) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFFFF3CD))
-                        .clickable { com.example.reminder.ReminderManager.openExactAlarmSettings(context) }
-                        .padding(10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("⏰", fontSize = 16.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Izin 'Alarms & Reminders' belum aktif. Ketuk untuk mengizinkan agar alarm tidak ditahan XOS.",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFF856404),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // Subtasks Builder

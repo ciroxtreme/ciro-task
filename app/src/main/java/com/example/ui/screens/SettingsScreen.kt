@@ -114,7 +114,6 @@ fun SettingsScreen(
     var editingTagForPicker by remember { mutableStateOf<com.example.util.TagData?>(null) }
     var showTagPickerModal by remember { mutableStateOf(false) }
     var showAlarmLogsDialog by remember { mutableStateOf(false) }
-    var isBackgroundGuardEnabled by remember { mutableStateOf(true) }
 
     val completedCount = tasks.count { it.isCompleted }
     val totalCount = tasks.size
@@ -283,32 +282,6 @@ fun SettingsScreen(
                                 Switch(
                                     checked = isTaskNotificationEnabled,
                                     onCheckedChange = { isTaskNotificationEnabled = it },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = WarmPrimary
-                                    )
-                                )
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        SettingRowItem(
-                            icon = Icons.Default.HelpOutline,
-                            iconBg = PastelPurple,
-                            title = "🛡️ Mode Penjaga Alarm (Infinix/Xiaomi)",
-                            subtitle = "Jaga proses alarm tetap aktif 100% di HP Infinix saat aplikasi ditutup.",
-                            trailing = {
-                                Switch(
-                                    checked = isBackgroundGuardEnabled,
-                                    onCheckedChange = { enabled ->
-                                        isBackgroundGuardEnabled = enabled
-                                        if (enabled) {
-                                            com.example.reminder.BackgroundGuardService.start(context)
-                                        } else {
-                                            com.example.reminder.BackgroundGuardService.stop(context)
-                                        }
-                                    },
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = Color.White,
                                         checkedTrackColor = WarmPrimary

@@ -34,7 +34,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.reminder.ReminderManager
-import com.example.ui.components.AlarmPermissionDialog
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.NavTab
@@ -74,22 +73,12 @@ fun MainAppContent(viewModel: TaskViewModel = viewModel()) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
-    var isExactAlarmAllowed by remember {
-        mutableStateOf(ReminderManager.canScheduleExactAlarms(context))
-    }
-    var showAlarmPermissionDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                val previouslyAllowed = isExactAlarmAllowed
-                val currentlyAllowed = ReminderManager.canScheduleExactAlarms(context)
-                isExactAlarmAllowed = currentlyAllowed
-                if (!previouslyAllowed && currentlyAllowed) {
-                    showAlarmPermissionDialog = false
-                    coroutineScope.launch {
-                        ReminderManager.rescheduleAllReminders(context)
-                    }
+                coroutineScope.launch {
+                    ReminderManager.rescheduleAllReminders(context)
                 }
             }
         }
@@ -102,9 +91,6 @@ fun MainAppContent(viewModel: TaskViewModel = viewModel()) {
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        if (!isExactAlarmAllowed) {
-            showAlarmPermissionDialog = true
         }
     }
 
@@ -167,8 +153,6 @@ fun MainAppContent(viewModel: TaskViewModel = viewModel()) {
                         selectedCategoryId = filterState.categoryId,
                         selectedTag = filterState.tag,
                         selectedSort = sortOption,
-                        isExactAlarmAllowed = isExactAlarmAllowed,
-                        onRequestExactAlarmPermission = { showAlarmPermissionDialog = true },
                         onSelectSortOption = { viewModel.setSortOption(it) },
                         onSelectTimeFilter = { viewModel.setTimeFilter(it) },
                         onSelectCategory = { viewModel.setFilterCategory(it) },
@@ -271,17 +255,6 @@ fun MainAppContent(viewModel: TaskViewModel = viewModel()) {
                 onDismiss = { viewModel.closeCategoryPicker() },
                 onConfirm = { name, icon, hex ->
                     viewModel.saveCategory(name, icon, hex)
-                }
-            )
-        }
-
-        // Alarm Permission Dialog for Infinix / Android 12+
-        if (showAlarmPermissionDialog) {
-            AlarmPermissionDialog(
-                onDismiss = { showAlarmPermissionDialog = false },
-                onOpenSettings = {
-                    showAlarmPermissionDialog = false
-                    ReminderManager.openExactAlarmSettings(context)
                 }
             )
         }

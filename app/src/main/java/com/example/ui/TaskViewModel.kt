@@ -270,7 +270,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
             val catName = allCategories.value.find { it.id == categoryId }?.name ?: "Task"
             if (hasReminder) {
                 ReminderManager.scheduleTaskReminder(getApplication(), savedTask, catName)
-                com.example.reminder.BackgroundGuardService.start(getApplication())
             }
         }
     }
@@ -293,14 +292,18 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateTask(task: TaskEntity) {
         viewModelScope.launch {
-            repository.updateTask(task)
-            _editingTask.value = null
-            val catName = allCategories.value.find { it.id == task.categoryId }?.name ?: "Task"
-            if (task.hasReminder && !task.isCompleted) {
-                ReminderManager.scheduleTaskReminder(getApplication(), task, catName)
-                com.example.reminder.BackgroundGuardService.start(getApplication())
+            val updatedTask = if (task.dueTimestamp > System.currentTimeMillis() && task.isCompleted) {
+                task.copy(isCompleted = false)
             } else {
-                ReminderManager.cancelTaskReminder(getApplication(), task.id)
+                task
+            }
+            repository.updateTask(updatedTask)
+            _editingTask.value = null
+            val catName = allCategories.value.find { it.id == updatedTask.categoryId }?.name ?: "Task"
+            if (updatedTask.hasReminder && !updatedTask.isCompleted) {
+                ReminderManager.scheduleTaskReminder(getApplication(), updatedTask, catName)
+            } else {
+                ReminderManager.cancelTaskReminder(getApplication(), updatedTask.id)
             }
         }
     }

@@ -116,9 +116,6 @@ object ReminderManager {
                 }
             }
             AlarmDiagnostics.logEvent(context, "RESCHEDULE_ALL_SUCCESS", mapOf("count" to count))
-            if (count > 0) {
-                BackgroundGuardService.start(context)
-            }
         } catch (e: Exception) {
             AlarmDiagnostics.logEvent(context, "RESCHEDULE_ALL_FAILED", mapOf("error" to e.message))
         }
@@ -248,11 +245,15 @@ object ReminderManager {
         )
 
         val now = System.currentTimeMillis()
-        val triggerTime = task.dueTimestamp
+        var triggerTime = task.dueTimestamp
 
-        // Don't schedule past reminders
+        // Don't schedule past reminders, but give a 60s tolerance for quick-test scheduling
         if (triggerTime <= now) {
-            return
+            if (now - triggerTime < 60_000L) {
+                triggerTime = now + 10_000L
+            } else {
+                return
+            }
         }
 
         val formattedTime = SimpleDateFormat("HH:mm:ss dd/MM", Locale.getDefault()).format(Date(triggerTime))
