@@ -321,7 +321,7 @@ fun TaskEditBottomSheet(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(if (hasReminder) "Matikan Pop-up Reminder" else "Aktifkan Pop-up Reminder") },
+                            text = { Text(if (hasReminder) "Matikan Alarm Pengingat" else "Aktifkan Alarm Pengingat") },
                             onClick = {
                                 hasReminder = !hasReminder
                                 persistEdits()

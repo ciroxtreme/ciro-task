@@ -10,6 +10,7 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.example.MainActivity
 import com.example.R
 import com.example.util.AlarmLogger
 
@@ -34,7 +35,7 @@ object AlarmNotificationHelper {
                 "Ciro Task Alarm Ringtone",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Alarm & pop-up pengingat tugas Ciro Task (Tembus DND)"
+                description = "Alarm & notifikasi pengingat tugas Ciro Task (Tembus DND)"
                 setSound(alarmSoundUri, audioAttributes)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 800, 400, 800, 400)
@@ -58,20 +59,15 @@ object AlarmNotificationHelper {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notifId = if (taskId > 0) taskId.toInt().coerceAtLeast(1) else (System.currentTimeMillis() % 100000).toInt()
 
-        // Full Screen Intent to ReminderAlertActivity
-        val popupIntent = Intent(context, ReminderAlertActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+        // Intent to open MainActivity when notification is tapped
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
-            putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, taskTitle)
-            putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, categoryName)
-            putExtra(TaskReminderReceiver.EXTRA_REMARK, remark)
         }
-        val fullScreenPendingIntent = PendingIntent.getActivity(
+        val openAppPendingIntent = PendingIntent.getActivity(
             context,
             notifId,
-            popupIntent,
+            openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
@@ -123,10 +119,9 @@ object AlarmNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setAutoCancel(false)
+            .setAutoCancel(true)
             .setOngoing(true)
-            .setContentIntent(fullScreenPendingIntent)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .setContentIntent(openAppPendingIntent)
             .addAction(0, "✓ Selesai", completePendingIntent)
             .addAction(0, "⏰ Tunda 5 Mnt", snoozePendingIntent)
             .addAction(0, "✕ Matikan", dismissPendingIntent)

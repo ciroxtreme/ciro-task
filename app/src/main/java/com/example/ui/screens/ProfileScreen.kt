@@ -173,7 +173,7 @@ fun ProfileScreen(
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Pop-up Reminder Aktif",
+                                text = "Alarm & Notifikasi Aktif",
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = WarmText,
@@ -185,7 +185,7 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "Pengingat tugas akan muncul melayang di layar (heads-up notification) dan dialog interaktif dengan opsi Selesai atau Tunda 10 menit.",
+                            text = "Pengingat tugas akan berbunyi tepat waktu dengan notifikasi alarm interaktif (opsi Selesai, Tunda 5 mnt, atau Matikan).",
                             fontSize = 12.sp,
                             color = WarmTextSecondary,
                             lineHeight = 16.sp
@@ -200,7 +200,7 @@ fun ProfileScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "⚡ Tes Pop-up Reminder Sekarang",
+                                text = "⚡ Tes Alarm & Notifikasi Sekarang",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )

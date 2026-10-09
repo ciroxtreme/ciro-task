@@ -324,20 +324,11 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        val canOverlay = remember(context) { com.example.reminder.ReminderManager.canDrawOverlays(context) }
                         SettingRowItem(
-                            icon = Icons.Default.HelpOutline,
-                            iconBg = if (canOverlay) PastelGreen else PastelOrange,
-                            title = "Tampilkan di Atas Aplikasi Lain",
-                            subtitle = if (canOverlay) "✅ Diizinkan (Pop-up alarm bisa langsung muncul di atas layar)" else "⚠️ Ketuk untuk memberi izin pop-up di atas aplikasi lain",
-                            onClick = { com.example.reminder.ReminderManager.openOverlaySettings(context) }
-                        )
-
-                        SettingRowItem(
-                            icon = Icons.Default.HelpOutline,
+                            icon = Icons.Default.NotificationsActive,
                             iconBg = PastelOrange,
-                            title = "Tes Pop-up Alarm",
-                            subtitle = "Tes langsung pop-up reminder di layar HP Anda.",
+                            title = "Tes Alarm & Notifikasi",
+                            subtitle = "Tes langsung bunyi alarm & notifikasi di HP Anda.",
                             onClick = onTestReminder
                         )
 

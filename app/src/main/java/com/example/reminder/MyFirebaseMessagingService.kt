@@ -26,7 +26,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         // 1. Play sound & vibration
         AlarmSoundPlayer.play(this)
 
-        // 2. Directly show Heads-Up & Full-Screen Notification
+        // 2. Show Heads-Up Notification with actions
         AlarmNotificationHelper.showAlarmNotification(
             context = this,
             taskId = taskId,
@@ -34,19 +34,5 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             categoryName = category,
             remark = remark
         )
-
-        // 3. Try to start popup directly
-        try {
-            val popupIntent = Intent(this, ReminderAlertActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
-                putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, title)
-                putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, category)
-                putExtra(TaskReminderReceiver.EXTRA_REMARK, remark)
-            }
-            startActivity(popupIntent)
-        } catch (_: Exception) {}
     }
 }

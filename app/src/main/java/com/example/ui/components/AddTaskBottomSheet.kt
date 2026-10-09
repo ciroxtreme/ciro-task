@@ -402,7 +402,7 @@ fun AddTaskBottomSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Pop-up Reminder Toggle
+            // Reminder & Alarm Toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -414,14 +414,14 @@ fun AddTaskBottomSheet(
             ) {
                 Column {
                     Text(
-                        text = "Aktifkan Pop-up Reminder",
+                        text = "Aktifkan Pengingat & Alarm",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             color = WarmText
                         )
                     )
                     Text(
-                        text = "Pop-up heads-up saat jam pengingat tiba",
+                        text = "Bunyikan alarm & kirim notifikasi saat waktu tiba",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 11.sp,
                             color = WarmTextSecondary

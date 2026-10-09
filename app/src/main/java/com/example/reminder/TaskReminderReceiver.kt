@@ -115,7 +115,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 // 2. Play Audio & Vibration
                 AlarmSoundPlayer.play(context)
 
-                // 3. Directly show Heads-Up & Full-Screen Notification (Never blocked by background limits)
+                // 3. Show Heads-Up Notification with actions (Complete, Snooze, Dismiss)
                 AlarmNotificationHelper.showAlarmNotification(
                     context = context,
                     taskId = taskId,
@@ -123,23 +123,6 @@ class TaskReminderReceiver : BroadcastReceiver() {
                     categoryName = categoryName,
                     remark = remark
                 )
-
-                // 4. Try starting activity directly (if permitted / screen on)
-                try {
-                    val popupIntent = Intent(context, ReminderAlertActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        putExtra(EXTRA_TASK_ID, taskId)
-                        putExtra(EXTRA_TASK_TITLE, taskTitle)
-                        putExtra(EXTRA_CATEGORY_NAME, categoryName)
-                        putExtra(EXTRA_REMARK, remark)
-                    }
-                    context.startActivity(popupIntent)
-                    AlarmLogger.log(context, "🚀 [Activity] Berhasil meluncurkan ReminderAlertActivity langsung!")
-                } catch (e: Exception) {
-                    AlarmLogger.log(context, "ℹ️ Activity langsung tidak dapat dibuka (ditangani oleh FullScreenIntent): ${e.message}")
-                }
             }
         }
     }

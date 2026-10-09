@@ -338,7 +338,7 @@ object ReminderManager {
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, 999999L)
             putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, title)
             putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, category)
-            putExtra(TaskReminderReceiver.EXTRA_REMARK, "Ini contoh Pop-up Reminder aktif Ciro Task!")
+            putExtra(TaskReminderReceiver.EXTRA_REMARK, "Ini contoh Alarm & Notifikasi aktif Ciro Task!")
         }
         context.sendBroadcast(intent)
     }
