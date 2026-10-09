@@ -325,7 +325,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         SettingRowItem(
-                            icon = Icons.Default.NotificationsActive,
+                            icon = Icons.Default.Notifications,
                             iconBg = PastelOrange,
                             title = "Tes Alarm & Notifikasi",
                             subtitle = "Tes langsung bunyi alarm & notifikasi di HP Anda.",
