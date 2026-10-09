@@ -12,6 +12,9 @@ import android.provider.Settings
 import com.example.MainActivity
 import com.example.data.model.TaskEntity
 import com.example.util.AlarmLogger
+import com.example.data.db.AppDatabase
+import com.example.data.repository.TaskRepository
+import kotlinx.coroutines.flow.firstOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -73,18 +76,51 @@ object ReminderManager {
     }
 
     fun openExactAlarmSettings(context: Context) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                     data = Uri.parse("package:${context.packageName}")
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(intent)
-            } else {
-                openAppDetailsSettings(context)
+                return
+            } catch (_: Exception) {
+                try {
+                    // Fallback to the general Alarms & Reminders screen if package URI is rejected by OEM
+                    val fallbackIntent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(fallbackIntent)
+                    return
+                } catch (_: Exception) {}
             }
-        } catch (_: Exception) {
-            openAppDetailsSettings(context)
+        }
+        openAppDetailsSettings(context)
+    }
+
+    suspend fun rescheduleAllReminders(context: Context) {
+        try {
+            val db = AppDatabase.getDatabase(context)
+            val repository = TaskRepository(db.taskDao(), db.categoryDao())
+            val tasks = repository.allTasks.firstOrNull() ?: emptyList()
+            val categories = repository.allCategories.firstOrNull() ?: emptyList()
+            val categoryMap = categories.associate { it.id to it.name }
+
+            val now = System.currentTimeMillis()
+            var count = 0
+            for (task in tasks) {
+                if (task.hasReminder && !task.isCompleted && task.dueTimestamp > now) {
+                    val catName = categoryMap[task.categoryId] ?: "Tugas"
+                    scheduleTaskReminder(context, task, catName)
+                    count++
+                }
+            }
+            AlarmDiagnostics.logEvent(context, "RESCHEDULE_ALL_SUCCESS", mapOf("count" to count))
+            if (count > 0) {
+                BackgroundGuardService.start(context)
+            }
+        } catch (e: Exception) {
+            AlarmDiagnostics.logEvent(context, "RESCHEDULE_ALL_FAILED", mapOf("error" to e.message))
         }
     }
 
