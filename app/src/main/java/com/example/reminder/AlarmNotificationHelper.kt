@@ -50,7 +50,7 @@ object AlarmNotificationHelper {
 
         // Intent to open MainActivity when notification body is tapped
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
         }
         val openAppPendingIntent = PendingIntent.getActivity(
@@ -62,7 +62,7 @@ object AlarmNotificationHelper {
 
         // Full-screen intent directed to ReminderAlertActivity
         val alertActivityIntent = Intent(context, ReminderAlertActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+            this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
@@ -79,7 +79,7 @@ object AlarmNotificationHelper {
 
         // Action: Selesai
         val completeIntent = Intent(context, TaskReminderReceiver::class.java).apply {
-            action = TaskReminderReceiver.ACTION_COMPLETE_TASK
+            this.action = TaskReminderReceiver.ACTION_COMPLETE_TASK
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
             putExtra(TaskReminderReceiver.EXTRA_NOTIFICATION_ID, notifId)
         }
@@ -92,7 +92,7 @@ object AlarmNotificationHelper {
 
         // Action: Tunda 5 Menit
         val snoozeIntent = Intent(context, TaskReminderReceiver::class.java).apply {
-            action = TaskReminderReceiver.ACTION_SNOOZE_TASK
+            this.action = TaskReminderReceiver.ACTION_SNOOZE_TASK
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
             putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, taskTitle)
             putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, categoryName)
@@ -108,7 +108,7 @@ object AlarmNotificationHelper {
 
         // Action: Matikan Alarm
         val dismissIntent = Intent(context, TaskReminderReceiver::class.java).apply {
-            action = TaskReminderReceiver.ACTION_DISMISS_ALARM
+            this.action = TaskReminderReceiver.ACTION_DISMISS_ALARM
             putExtra(TaskReminderReceiver.EXTRA_NOTIFICATION_ID, notifId)
         }
         val dismissPendingIntent = PendingIntent.getBroadcast(

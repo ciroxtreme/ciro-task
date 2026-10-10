@@ -108,7 +108,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
                 // Alihkan ACTION_TASK_ALARM agar menjalankan ReminderService menggunakan ContextCompat.startForegroundService
                 val serviceIntent = Intent(context, ReminderService::class.java).apply {
-                    action = ACTION_TASK_ALARM
+                    this.action = ACTION_TASK_ALARM
                     putExtra(EXTRA_TASK_ID, taskId)
                     putExtra(EXTRA_TASK_TITLE, taskTitle)
                     putExtra(EXTRA_CATEGORY_NAME, categoryName)

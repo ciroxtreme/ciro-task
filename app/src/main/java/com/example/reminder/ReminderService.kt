@@ -80,7 +80,7 @@ class ReminderService : Service() {
         // 3. Launch popup activity directly if possible (unlocked screen / direct assist)
         try {
             val alertIntent = Intent(this, ReminderAlertActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
@@ -118,7 +118,7 @@ class ReminderService : Service() {
                 AlarmSoundPlayer.stop(context)
                 try {
                     val intent = Intent(context, ReminderService::class.java).apply {
-                        action = ACTION_STOP_ALARM
+                        this.action = ACTION_STOP_ALARM
                     }
                     context.startService(intent)
                 } catch (_: Exception) {}
