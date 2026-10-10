@@ -6,8 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
@@ -15,20 +13,11 @@ import com.example.R
 import com.example.util.AlarmLogger
 
 object AlarmNotificationHelper {
-    const val CHANNEL_ID = "ciro_task_alarm_channel_v4"
+    const val CHANNEL_ID = "ciro_task_alarm_silent_channel_v5"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-            val alarmSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .build()
 
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -36,7 +25,8 @@ object AlarmNotificationHelper {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Alarm & notifikasi pengingat tugas Ciro Task (Tembus DND)"
-                setSound(alarmSoundUri, audioAttributes)
+                // Tanpa suara bawaan agar MediaPlayer di AlarmSoundPlayer menjadi satu-satunya sumber audio
+                setSound(null, null)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 800, 400, 800, 400)
                 enableLights(true)
@@ -48,18 +38,17 @@ object AlarmNotificationHelper {
         }
     }
 
-    fun showAlarmNotification(
+    fun buildAlarmNotification(
         context: Context,
         taskId: Long,
         taskTitle: String,
         categoryName: String,
         remark: String
-    ) {
+    ): Notification {
         createNotificationChannel(context)
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notifId = if (taskId > 0) taskId.toInt().coerceAtLeast(1) else (System.currentTimeMillis() % 100000).toInt()
 
-        // Intent to open MainActivity when notification is tapped
+        // Intent to open MainActivity when notification body is tapped
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
@@ -68,6 +57,23 @@ object AlarmNotificationHelper {
             context,
             notifId,
             openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+
+        // Full-screen intent directed to ReminderAlertActivity
+        val alertActivityIntent = Intent(context, ReminderAlertActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
+            putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, taskTitle)
+            putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, categoryName)
+            putExtra(TaskReminderReceiver.EXTRA_REMARK, remark)
+        }
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            context,
+            notifId + 500000,
+            alertActivityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
@@ -122,14 +128,24 @@ object AlarmNotificationHelper {
             .setAutoCancel(true)
             .setOngoing(true)
             .setContentIntent(openAppPendingIntent)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(0, "✓ Selesai", completePendingIntent)
             .addAction(0, "⏰ Tunda 5 Mnt", snoozePendingIntent)
             .addAction(0, "✕ Matikan", dismissPendingIntent)
 
-        val notification = notificationBuilder.build()
-        // Insistent flag so ringtone repeats continuously until user interacts
-        notification.flags = notification.flags or Notification.FLAG_INSISTENT
+        return notificationBuilder.build()
+    }
 
+    fun showAlarmNotification(
+        context: Context,
+        taskId: Long,
+        taskTitle: String,
+        categoryName: String,
+        remark: String
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notifId = if (taskId > 0) taskId.toInt().coerceAtLeast(1) else (System.currentTimeMillis() % 100000).toInt()
+        val notification = buildAlarmNotification(context, taskId, taskTitle, categoryName, remark)
         try {
             notificationManager.notify(notifId, notification)
             AlarmLogger.log(context, "🔔 [Notification] Berhasil memunculkan notifikasi alarm (ID: $notifId)!")

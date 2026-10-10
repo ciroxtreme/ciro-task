@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
+import androidx.core.content.ContextCompat
 import com.example.data.db.AppDatabase
 import com.example.data.repository.TaskRepository
 import com.example.util.AlarmLogger
@@ -12,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class TaskReminderReceiver : BroadcastReceiver() {
+
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: ACTION_TASK_ALARM
         val notifId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
@@ -21,6 +23,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             ACTION_COMPLETE_TASK -> {
                 AlarmLogger.log(context, "✅ [Aksi Notifikasi] Tombol Selesai diklik untuk Task ID: $taskId")
                 AlarmSoundPlayer.stop(context)
+                ReminderService.stop(context)
                 if (notifId > 0) {
                     AlarmNotificationHelper.cancelNotificationById(context, notifId)
                 } else if (taskId > 0) {
@@ -52,6 +55,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 val categoryName = intent.getStringExtra(EXTRA_CATEGORY_NAME) ?: "Tugas"
                 AlarmLogger.log(context, "⏰ [Aksi Notifikasi] Tombol Tunda 5 Menit diklik untuk Task ID: $taskId")
                 AlarmSoundPlayer.stop(context)
+                ReminderService.stop(context)
                 if (notifId > 0) {
                     AlarmNotificationHelper.cancelNotificationById(context, notifId)
                 } else if (taskId > 0) {
@@ -84,6 +88,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             ACTION_DISMISS_ALARM -> {
                 AlarmLogger.log(context, "✕ [Aksi Notifikasi] Tombol Matikan Alarm diklik.")
                 AlarmSoundPlayer.stop(context)
+                ReminderService.stop(context)
                 if (notifId > 0) {
                     AlarmNotificationHelper.cancelNotificationById(context, notifId)
                 } else if (taskId > 0) {
@@ -98,31 +103,25 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
                 AlarmLogger.log(context, "⚡ [BroadcastReceiver] Alarm RTC terpicu dari sistem! ID: $taskId, Judul: $taskTitle")
 
-                // 1. Acquire WakeLock
-                var wakeLock: PowerManager.WakeLock? = null
+                // Handover static WakeLock agar CPU tidak tidur sebelum service berjalan
+                acquireWakeLock(context)
+
+                // Alihkan ACTION_TASK_ALARM agar menjalankan ReminderService menggunakan ContextCompat.startForegroundService
+                val serviceIntent = Intent(context, ReminderService::class.java).apply {
+                    action = ACTION_TASK_ALARM
+                    putExtra(EXTRA_TASK_ID, taskId)
+                    putExtra(EXTRA_TASK_TITLE, taskTitle)
+                    putExtra(EXTRA_CATEGORY_NAME, categoryName)
+                    putExtra(EXTRA_REMARK, remark)
+                }
+
                 try {
-                    val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-                    @Suppress("DEPRECATION")
-                    wakeLock = pm?.newWakeLock(
-                        PowerManager.FULL_WAKE_LOCK or
-                                PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                                PowerManager.ON_AFTER_RELEASE,
-                        "ciro:task_alarm_receiver_wakelock"
-                    )
-                    wakeLock?.acquire(15000L) // 15s wake lock
-                } catch (_: Exception) {}
-
-                // 2. Play Audio & Vibration
-                AlarmSoundPlayer.play(context)
-
-                // 3. Show Heads-Up Notification with actions (Complete, Snooze, Dismiss)
-                AlarmNotificationHelper.showAlarmNotification(
-                    context = context,
-                    taskId = taskId,
-                    taskTitle = taskTitle,
-                    categoryName = categoryName,
-                    remark = remark
-                )
+                    ContextCompat.startForegroundService(context, serviceIntent)
+                } catch (e: Exception) {
+                    AlarmLogger.log(context, "❌ Gagal startForegroundService: ${e.message}")
+                    e.printStackTrace()
+                    releaseWakeLock()
+                }
             }
         }
     }
@@ -138,5 +137,37 @@ class TaskReminderReceiver : BroadcastReceiver() {
         const val EXTRA_CATEGORY_NAME = "extra_category_name"
         const val EXTRA_REMARK = "extra_remark"
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
+
+        private var wakeLock: PowerManager.WakeLock? = null
+
+        @Synchronized
+        fun acquireWakeLock(context: Context) {
+            try {
+                if (wakeLock == null) {
+                    val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                    @Suppress("DEPRECATION")
+                    wakeLock = pm?.newWakeLock(
+                        PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        "ciro:task_alarm_receiver_wakelock"
+                    )?.apply {
+                        setReferenceCounted(false)
+                    }
+                }
+                wakeLock?.acquire(30000L) // 30s timeout
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        @Synchronized
+        fun releaseWakeLock() {
+            try {
+                if (wakeLock?.isHeld == true) {
+                    wakeLock?.release()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

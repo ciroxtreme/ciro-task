@@ -6,11 +6,19 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
-import com.example.R
 import com.example.util.AlarmLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class ReminderService : Service() {
+
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+    private var timeoutJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -18,6 +26,12 @@ class ReminderService : Service() {
         val action = intent?.action
         if (action == ACTION_STOP_ALARM) {
             AlarmSoundPlayer.stop(this)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
             stopSelf()
             return START_NOT_STICKY
         }
@@ -29,26 +43,14 @@ class ReminderService : Service() {
 
         AlarmLogger.log(this, "🚀 [ReminderService] Dipanggil untuk Task: $taskTitle")
 
-        // 1. Show Notification directly
-        AlarmNotificationHelper.showAlarmNotification(
+        // 1. Build Foreground notification with fullScreenIntent pointing to ReminderAlertActivity
+        val notification = AlarmNotificationHelper.buildAlarmNotification(
             context = this,
             taskId = taskId,
             taskTitle = taskTitle,
             categoryName = categoryName,
             remark = remark
         )
-
-        // 2. Play Alarm Audio via AlarmSoundPlayer
-        AlarmSoundPlayer.play(this)
-
-        // 3. Promote to foreground service safely with mediaPlayback type
-        val notification = NotificationCompat.Builder(this, AlarmNotificationHelper.CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("⏰ Alarm Tugas: $taskTitle")
-            .setContentText("Kategori: $categoryName")
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .build()
 
         val notificationId = (if (taskId > 0) taskId else System.currentTimeMillis()).toInt().coerceAtLeast(1)
 
@@ -57,17 +59,44 @@ class ReminderService : Service() {
                 startForeground(
                     notificationId,
                     notification,
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                    else 0
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                 )
             } else {
                 startForeground(notificationId, notification)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            AlarmLogger.log(this, "⚠️ Gagal startForeground dengan mediaPlayback: ${e.message}")
             try {
                 startForeground(notificationId, notification)
             } catch (_: Exception) {}
+        }
+
+        // Release handover static WakeLock from TaskReminderReceiver
+        TaskReminderReceiver.releaseWakeLock()
+
+        // 2. Play Alarm Audio via AlarmSoundPlayer
+        AlarmSoundPlayer.play(this)
+
+        // 3. Launch popup activity directly if possible (unlocked screen / direct assist)
+        try {
+            val alertIntent = Intent(this, ReminderAlertActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
+                putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, taskTitle)
+                putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, categoryName)
+                putExtra(TaskReminderReceiver.EXTRA_REMARK, remark)
+            }
+            startActivity(alertIntent)
+        } catch (_: Exception) {}
+
+        // 4. Setup auto-timeout (5 minutes) so alarm stops automatically to prevent battery drain
+        timeoutJob?.cancel()
+        timeoutJob = serviceScope.launch {
+            delay(5 * 60 * 1000L)
+            AlarmLogger.log(this@ReminderService, "⏱️ Alarm timeout 5 menit tercapai, otomatis menghentikan alarm.")
+            stop(this@ReminderService)
         }
 
         return START_NOT_STICKY
@@ -75,7 +104,10 @@ class ReminderService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        timeoutJob?.cancel()
+        serviceJob.cancel()
         AlarmSoundPlayer.stop(this)
+        TaskReminderReceiver.releaseWakeLock()
     }
 
     companion object {
@@ -84,10 +116,12 @@ class ReminderService : Service() {
         fun stop(context: Context) {
             try {
                 AlarmSoundPlayer.stop(context)
-                val intent = Intent(context, ReminderService::class.java).apply {
-                    action = ACTION_STOP_ALARM
-                }
-                context.startService(intent)
+                try {
+                    val intent = Intent(context, ReminderService::class.java).apply {
+                        action = ACTION_STOP_ALARM
+                    }
+                    context.startService(intent)
+                } catch (_: Exception) {}
                 context.stopService(Intent(context, ReminderService::class.java))
             } catch (_: Exception) {}
         }

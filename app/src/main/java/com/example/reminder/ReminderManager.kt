@@ -153,6 +153,10 @@ object ReminderManager {
                 intents.add(Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")))
             }
             manufacturer.contains("transsion") || manufacturer.contains("infinix") || manufacturer.contains("tecno") || manufacturer.contains("itel") -> {
+                intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity")))
+                intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.cyin.himgr.applicationmanager.view.activities.LockScreenCleanupActivity")))
+                intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.cyin.himgr.powermanager.views.activity.PowerManagerActivity")))
+                intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.cyin.himgr.widget.activity.MainActivity")))
                 intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.startupmanager.StartupManagerActivity")))
                 intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.MainActivity")))
                 intents.add(Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.autostart.AutoStartActivity")))
