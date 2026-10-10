@@ -13,6 +13,7 @@ import com.example.util.AlarmLogger
 
 object AlarmSoundPlayer {
     private var mediaPlayer: MediaPlayer? = null
+    private var ringtone: android.media.Ringtone? = null
     private var vibrator: Vibrator? = null
     private var isPlaying = false
 
@@ -32,13 +33,31 @@ object AlarmSoundPlayer {
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .build()
 
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(context.applicationContext, alertUri)
-                setAudioAttributes(audioAttributes)
-                setAudioStreamType(AudioManager.STREAM_ALARM)
-                isLooping = true
-                prepare()
-                start()
+            var mediaPlayerStarted = false
+            try {
+                mediaPlayer = MediaPlayer().apply {
+                    setDataSource(context.applicationContext, alertUri)
+                    setAudioAttributes(audioAttributes)
+                    isLooping = true
+                    prepare()
+                    start()
+                }
+                mediaPlayerStarted = true
+            } catch (mediaEx: Exception) {
+                AlarmLogger.log(context, "⚠️ MediaPlayer gagal (${mediaEx.message}), mencoba fallback Ringtone...")
+                try {
+                    ringtone = RingtoneManager.getRingtone(context.applicationContext, alertUri)?.apply {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            this.audioAttributes = audioAttributes
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            isLooping = true
+                        }
+                        play()
+                    }
+                } catch (ringtoneEx: Exception) {
+                    AlarmLogger.log(context, "⚠️ Fallback Ringtone juga gagal: ${ringtoneEx.message}")
+                }
             }
 
             vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
@@ -51,7 +70,7 @@ object AlarmSoundPlayer {
                 vibrator?.vibrate(longArrayOf(0, 800, 400, 800, 400), 0)
             }
         } catch (e: Exception) {
-            AlarmLogger.log(context, "⚠️ Gagal memulai MediaPlayer: ${e.message}")
+            AlarmLogger.log(context, "⚠️ Gagal memulai audio/getaran: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -70,6 +89,18 @@ object AlarmSoundPlayer {
             e.printStackTrace()
         } finally {
             mediaPlayer = null
+        }
+
+        try {
+            ringtone?.let {
+                if (it.isPlaying) {
+                    it.stop()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            ringtone = null
         }
 
         try {

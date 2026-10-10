@@ -17,4 +17,4 @@ local.properties
 .env
 debug.keystore
 apk_output_new/
-
+build-output/

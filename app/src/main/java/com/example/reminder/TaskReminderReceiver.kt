@@ -103,10 +103,37 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
                 AlarmLogger.log(context, "⚡ [BroadcastReceiver] Alarm RTC terpicu dari sistem! ID: $taskId, Judul: $taskTitle")
 
-                // Handover static WakeLock agar CPU tidak tidur sebelum service berjalan
+                // 1. Handover static WakeLock agar CPU tidak tidur
                 acquireWakeLock(context)
 
-                // Alihkan ACTION_TASK_ALARM agar menjalankan ReminderService menggunakan ContextCompat.startForegroundService
+                // 2. Langsung tampilkan notifikasi alarm dengan suara & FLAG_INSISTENT di system server
+                // Ini menjamin suara alarm langsung berbunyi sekalipun service latar belakang dicegah OS
+                AlarmNotificationHelper.showAlarmNotification(
+                    context = context,
+                    taskId = taskId,
+                    taskTitle = taskTitle,
+                    categoryName = categoryName,
+                    remark = remark
+                )
+
+                // 3. Mainkan audio via AlarmSoundPlayer
+                AlarmSoundPlayer.play(context)
+
+                // 4. Coba luncurkan ReminderAlertActivity langsung jika layar menyala/diizinkan
+                try {
+                    val popupIntent = Intent(context, ReminderAlertActivity::class.java).apply {
+                        this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        putExtra(EXTRA_TASK_ID, taskId)
+                        putExtra(EXTRA_TASK_TITLE, taskTitle)
+                        putExtra(EXTRA_CATEGORY_NAME, categoryName)
+                        putExtra(EXTRA_REMARK, remark)
+                    }
+                    context.startActivity(popupIntent)
+                } catch (_: Exception) {}
+
+                // 5. Jalankan ReminderService untuk mengontrol status foreground dan auto-timeout 5 menit
                 val serviceIntent = Intent(context, ReminderService::class.java).apply {
                     this.action = ACTION_TASK_ALARM
                     putExtra(EXTRA_TASK_ID, taskId)
@@ -118,9 +145,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 try {
                     ContextCompat.startForegroundService(context, serviceIntent)
                 } catch (e: Exception) {
-                    AlarmLogger.log(context, "❌ Gagal startForegroundService: ${e.message}")
-                    e.printStackTrace()
-                    releaseWakeLock()
+                    AlarmLogger.log(context, "ℹ️ ReminderService background start dibatasi OS (alarm tetap berdering via notifikasi insisten): ${e.message}")
                 }
             }
         }

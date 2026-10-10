@@ -13,11 +13,20 @@ import com.example.R
 import com.example.util.AlarmLogger
 
 object AlarmNotificationHelper {
-    const val CHANNEL_ID = "ciro_task_alarm_silent_channel_v5"
+    const val CHANNEL_ID = "ciro_task_alarm_sound_channel_v6"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            val alarmUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+                ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+                ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+
+            val audioAttributes = android.media.AudioAttributes.Builder()
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .build()
 
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -25,8 +34,7 @@ object AlarmNotificationHelper {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Alarm & notifikasi pengingat tugas Ciro Task (Tembus DND)"
-                // Tanpa suara bawaan agar MediaPlayer di AlarmSoundPlayer menjadi satu-satunya sumber audio
-                setSound(null, null)
+                setSound(alarmUri, audioAttributes)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 800, 400, 800, 400)
                 enableLights(true)
@@ -70,11 +78,22 @@ object AlarmNotificationHelper {
             putExtra(TaskReminderReceiver.EXTRA_CATEGORY_NAME, categoryName)
             putExtra(TaskReminderReceiver.EXTRA_REMARK, remark)
         }
+
+        // Required on Android 14 & 15 to allow launching full-screen activity from background
+        val activityOptionsBundle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            android.app.ActivityOptions.makeBasic().apply {
+                setPendingIntentBackgroundActivityStartMode(
+                    android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                )
+            }.toBundle()
+        } else null
+
         val fullScreenPendingIntent = PendingIntent.getActivity(
             context,
             notifId + 500000,
             alertActivityIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0),
+            activityOptionsBundle
         )
 
         // Action: Selesai
@@ -118,6 +137,9 @@ object AlarmNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
+        val alarmUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+            ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("⏰ Alarm Tugas: $taskTitle")
@@ -125,15 +147,19 @@ object AlarmNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setAutoCancel(true)
+            .setAutoCancel(false)
             .setOngoing(true)
+            .setSound(alarmUri, android.media.AudioManager.STREAM_ALARM)
             .setContentIntent(openAppPendingIntent)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(0, "✓ Selesai", completePendingIntent)
             .addAction(0, "⏰ Tunda 5 Mnt", snoozePendingIntent)
             .addAction(0, "✕ Matikan", dismissPendingIntent)
 
-        return notificationBuilder.build()
+        val notification = notificationBuilder.build()
+        // Ensure Android System Server keeps repeating the alarm sound until dismissed
+        notification.flags = notification.flags or Notification.FLAG_INSISTENT
+        return notification
     }
 
     fun showAlarmNotification(

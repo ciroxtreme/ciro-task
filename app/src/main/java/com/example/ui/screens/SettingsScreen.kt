@@ -345,6 +345,47 @@ fun SettingsScreen(
                 }
             }
 
+            // PANDUAN KHUSUS INFINIX XOS
+            item {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "⚡ PENTING: Pengguna HP Infinix / Tecno / XOS",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFD84315),
+                                fontSize = 14.sp
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Agar alarm tetap bunyi saat aplikasi di-swipe:\n" +
+                                    "1. Buka layar Recent Apps (aplikasi berjalan).\n" +
+                                    "2. Tarik ke bawah kartu Ciro Task atau ketuk ikon titik tiga lalu pilih GEMBOK 🔒 (Kunci).\n" +
+                                    "3. Buka aplikasi Phone Master > Manajemen Mulai Otomatis (Auto-start) > Aktifkan Ciro Task.\n" +
+                                    "4. Di Phone Master > Pembersihan Layar Terkunci > Kecualikan Ciro Task.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color(0xFF5D4037),
+                                lineHeight = 18.sp
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedButton(
+                            onClick = { com.example.reminder.ReminderManager.openAutoStartSettings(context) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Buka Phone Master (Auto-Start)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD84315))
+                        }
+                    }
+                }
+            }
+
             // SECTION 2: Kelola Tugas & List (Management)
             item {
                 SectionHeader("Management")
